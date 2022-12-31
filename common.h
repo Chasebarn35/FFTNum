@@ -25,11 +25,11 @@ int_256(const int_256& other): data(new int[other.size()]),_size(other.size()),_
 	
 	}
 void resize(){//Removes leading zeros
-	size_t i = _size-1;
-	for(int a = data[i]; a!= 0 && i != 0;--i)//Error if i 
-		a = data[i];
-	if(i != 0){
-		_size=i;
+	int a = data[_size-1];//top of the data
+	if(!a){
+		for(;!a;_size--)
+			a=data[_size-1];
+		_size++;
 		}
 	}
 int& operator[](int offset) const noexcept{
@@ -71,15 +71,52 @@ int_256 operator+ (int other){
 		long otherD = !i?0L:(long)other;
 		long temp = (long)newNum[i] + otherD;
 		newNum[i] = (int)(temp&INT_MAX);
-		newNum[i+1]=(int)((temp>>32)&INT_MAX);
+		newNum[i+1]=(int)((temp>>31)&INT_MAX);
 	}
 	newNum.resize();
 	return newNum;
 	}
 
 
-int_256 operator* (int_256 other);//TODO
+int_256 operator* (int_256 other){
+	int_256* larger;
+	int_256* smallr;
+	if(_size > other.size()){
+		larger = &(*this);
+		smallr = &other;
+		}
+	else{
+		larger = &other;
+		smallr = &(*this);
+		}
+
+	int_256 Num(_size+other.size()+2);//is this necessary
+	for(size_t i = 0; i < larger->size();++i){
+		for(size_t j = 0; j < smallr->size();++j){
+			long temp = (long)(*larger)[i]*(long)(*smallr)[j] + (long)Num[i+j];
+			Num[i+j] = (int)(temp&INT_MAX);
+			Num[i+j+1] = (int)((temp >> 31)&INT_MAX);
+			Num[i+j+2] = (int)((temp >> 62)&INT_MAX);
+			}
+		}
+	Num.resize();
+	return Num;
+	}
+
+int_256 operator* (int other){
+	int_256 Num(_size+2);
+	for(size_t i = 0; i < _size;++i){
+		long temp = (long)data[i] * (long)other + Num[i];
+		Num[i] = (int)(temp&INT_MAX);
+		Num[i+1] = (int)((temp >> 31)&INT_MAX);
+		Num[i+2] = (int)((temp >> 62)&INT_MAX);
+		}
+	Num.resize();
+	return Num;
+	}
 	
+
+
 
 };
 
@@ -91,7 +128,7 @@ std::ostream& operator<<(std::ostream& os,const int_256& l256){
 		newLong = std::to_string(l256[l256.size()-i]);
 		zeroExtension.clear();
 		zeroExtension.append(10-newLong.length(),'0');//TODO make digit length compile time found
-		os << zeroExtension + newLong;
+		os << ","+zeroExtension + newLong;
 	}
 	return os;
 }
